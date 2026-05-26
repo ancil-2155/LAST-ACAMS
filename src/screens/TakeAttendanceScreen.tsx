@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera, CameraRef, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useFaceDetector } from 'react-native-vision-camera-face-detector';
 import { Worklets } from 'react-native-worklets-core';
 import firestore from '@react-native-firebase/firestore';
 
-import { findClosestMatch, StudentFaceData } from '../../services/face/attendanceMatcherService';
-import { generateFaceEmbedding } from '../../services/face/faceEmbeddingService';
+import { findClosestMatch, StudentFaceData } from '../services/face/attendanceMatcherService';
+import { generateFaceEmbedding } from '../services/face/faceEmbeddingService';
 
 const TakeAttendanceScreen = ({ route, navigation }: any) => {
   const { filters } = route.params;
@@ -19,7 +19,7 @@ const TakeAttendanceScreen = ({ route, navigation }: any) => {
 
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('front');
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<CameraRef>(null);
 
   useEffect(() => {
     if (!hasPermission) requestPermission();
@@ -100,9 +100,9 @@ const TakeAttendanceScreen = ({ route, navigation }: any) => {
 
   const { detectFaces } = useFaceDetector({
     performanceMode: 'fast',
-    contourMode: 'none',
-    landmarkMode: 'none',
-    classificationMode: 'none',
+    runContours: false,
+    runLandmarks: false,
+    runClassifications: false,
   });
 
   // Debouncing setup: Prevent multiple UI updates per second
@@ -232,7 +232,11 @@ const styles = StyleSheet.create({
   center: { justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: '#fff', marginTop: 12, fontSize: 16 },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },

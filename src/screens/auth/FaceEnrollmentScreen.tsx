@@ -6,9 +6,14 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
-import { Camera, useCameraDevice, useCameraFormat, useCameraPermission } from 'react-native-vision-camera';
+import {
+  Camera,
+  CameraRef,
+  useCameraDevice,
+  useCameraPermission,
+  usePhotoOutput,
+} from 'react-native-vision-camera';
 import { useFaceDetector } from 'react-native-vision-camera-face-detector';
 import { Worklets } from 'react-native-worklets-core';
 
@@ -35,7 +40,8 @@ const FaceEnrollmentScreen = ({ route, navigation }: any) => {
 
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('front');
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<CameraRef>(null);
+  const photoOutput = usePhotoOutput({ qualityPrioritization: 'speed' });
 
   useEffect(() => {
     if (!hasPermission) requestPermission();
@@ -44,9 +50,9 @@ const FaceEnrollmentScreen = ({ route, navigation }: any) => {
   // Use the face detector from vision-camera-face-detector
   const { detectFaces } = useFaceDetector({
     performanceMode: 'fast',
-    contourMode: 'none',
-    landmarkMode: 'none',
-    classificationMode: 'none',
+    runContours: false,
+    runLandmarks: false,
+    runClassifications: false,
   });
 
   // A JS worklet to handle the validation message state from the UI thread
@@ -73,19 +79,18 @@ const FaceEnrollmentScreen = ({ route, navigation }: any) => {
     
     setIsProcessing(true);
     try {
-      const photo = await cameraRef.current.takePhoto({
-        qualityPrioritization: 'speed',
+      const photo = await photoOutput.capturePhotoToFile({
         enableShutterSound: false,
-      });
+      }, {});
 
       // TODO: Here we should crop the photo based on face bounds and convert to Uint8Array.
       // For now, we'll mock the embedding generation with a dummy array since we don't 
       // have the cropping library (react-native-fs/image-resizer) set up yet.
-      console.log('Photo captured at:', photo.path);
+      console.log('Photo captured at:', photo.filePath);
       const dummyEmbedding = Array.from({length: 128}, () => Math.random());
 
       if (step === 'front') {
-        setFrontImage(photo.path);
+        setFrontImage(photo.filePath);
         setFrontEmbedding(dummyEmbedding);
         setStep('left');
         setValidationMessage('Turn your face to the left');
@@ -171,7 +176,7 @@ const FaceEnrollmentScreen = ({ route, navigation }: any) => {
         style={StyleSheet.absoluteFill}
         device={device}
         isActive={!isProcessing}
-        photo={true}
+        outputs={[photoOutput]}
         // frameProcessor={frameProcessor}
       />
 
@@ -219,7 +224,11 @@ export default FaceEnrollmentScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },

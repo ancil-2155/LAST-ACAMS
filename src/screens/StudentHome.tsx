@@ -1,321 +1,197 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  StatusBar,
-  Image,
-  Modal,
-  Animated,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/AppNavigator';
-
-const { width } = Dimensions.get('window');
+import DashboardHeader from '../components/dashboard/DashboardHeader';
+import FeatureGrid from '../components/dashboard/FeatureGrid';
+import type { DashboardFeature } from '../config/dashboardFeatures';
+import { studentFeatures } from '../config/dashboardFeatures';
+import { dashboardTheme } from '../theme/dashboardTheme';
 
 type StudentHomeProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'StudentHome'>;
-};
-
-type FeatureScreen =
-  | 'MeetingViewer'
-  | 'Library'
-  | 'Gallery'
-  | 'TimetableMenu'
-  | 'ViewResults'
-  | 'TeacherGroups'
-  | 'Resources'
-  | 'ApplyBonafide'
-  | 'StudentBonafideList'
-  | 'ApplyLeave'
-  | 'StudentLeaveList'
-  | 'StudentAssignments';
-
-type FeatureItem = {
-  id: number;
-  title: string;
-  icon: string;
-  gradient: [string, string];
-  screen: FeatureScreen;
-  badge?: number;
+  navigation: any;
 };
 
 const StudentHome: React.FC<StudentHomeProps> = ({ navigation }) => {
   const [userData, setUserData] = useState<any>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const loadUser = useCallback(async () => {
+    const currentUser = auth().currentUser;
 
-  useEffect(() => {
-    fetchUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!currentUser?.uid) {
+      setUserData(null);
+      setError('Please sign in again to load your dashboard.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setError(null);
+      const doc = await firestore().collection('users').doc(currentUser.uid).get();
+      setUserData({
+        uid: currentUser.uid,
+        email: currentUser.email,
+        ...(doc.data() || {}),
+      });
+    } catch (err) {
+      console.log('Student dashboard user load failed:', err);
+      setError('Unable to load your latest dashboard details.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const fetchUser = async () => {
-    const uid = auth().currentUser?.uid;
-    if (!uid) return;
-
-    const doc = await firestore().collection('users').doc(uid).get();
-    setUserData(doc.data());
-    setLoading(false);
-
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
-  };
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchUser();
+    await loadUser();
     setRefreshing(false);
   };
 
-  const features: FeatureItem[] = [
-    { id: 1, title: 'Join Meeting', icon: '🎥', gradient: ['#4ECDC4', '#44A08D'], screen: 'MeetingViewer' },
-    { id: 2, title: 'Library', icon: '📚', gradient: ['#667eea', '#764ba2'], screen: 'Library' },
-    { id: 3, title: 'Gallery', icon: '🖼️', gradient: ['#f093fb', '#f5576c'], screen: 'Gallery' },
-    { id: 4, title: 'Academic', icon: '📅', gradient: ['#4facfe', '#00f2fe'], screen: 'TimetableMenu' },
-    { id: 5, title: 'Results', icon: '📊', gradient: ['#fa709a', '#fee140'], screen: 'ViewResults' },
-    { id: 6, title: 'Teachers', icon: '👨‍🏫', gradient: ['#a18cd1', '#fbc2eb'], screen: 'TeacherGroups' },
-    { id: 7, title: 'Resources', icon: '📎', gradient: ['#ffecd2', '#fcb69f'], screen: 'Resources' },
-    
+  const displayName = useMemo(
+    () => userData?.name || auth().currentUser?.displayName || 'Student',
+    [userData],
+  );
 
-    // 🔥 NEW FEATURE
-    {
-      id: 8,
-      title: 'My Certificates',
-      icon: '📄',
-      gradient: ['#22C55E', '#16A34A'],
-      screen: 'StudentBonafideList',
-    },
-    {
-  id: 11,
-  title: 'Apply Leave',
-  icon: '📝',
-  gradient: ['#f7971e', '#ffd200'],
-  screen: 'ApplyLeave',
-},
-{
-  id: 20,
-  title: 'My Leaves',
-  icon: '📄',
-  gradient: ['#22c55e', '#16a34a'],
-  screen: 'StudentLeaveList',
-},
-{
-  id: 30,
-  title: 'Assignments',
-  icon: '📝',
-  gradient: ['#f59e0b', '#f97316'],
-  screen: 'StudentAssignments',
-}
-  ];
+  const profilePhotoUrl =
+    userData?.profilePhotoUrl ||
+    userData?.photoUrl ||
+    userData?.photoURL ||
+    userData?.faces?.[0] ||
+    auth().currentUser?.photoURL ||
+    null;
+
+  const localProfilePhotoUri = userData?.localProfilePhotoUri || null;
+
+  const handleFeaturePress = (feature: DashboardFeature) => {
+    (navigation.navigate as any)(feature.route);
+  };
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={dashboardTheme.colors.primary} />
+        <Text style={styles.loadingText}>Loading student dashboard...</Text>
       </View>
     );
   }
 
   return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor="#1F2937" />
-      <View style={styles.container}>
-        <ScrollView
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {/* HEADER */}
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <LinearGradient colors={['#1F2937', '#374151']} style={styles.header}>
-              <View style={styles.topBar}>
-                <View>
-                  <Text style={styles.welcome}>Welcome back</Text>
-                  <Text style={styles.name}>{userData?.name || 'Student'} 👋</Text>
-                </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={dashboardTheme.colors.primary} />
 
-                <TouchableOpacity onPress={() => setProfileOpen(true)}>
-                  {userData?.faces?.[0] ? (
-                    <Image source={{ uri: userData.faces[0] }} style={styles.avatar} />
-                  ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarText}>
-                        {userData?.name?.charAt(0) || 'S'}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </Animated.View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={dashboardTheme.colors.primary}
+          />
+        }
+      >
+        <DashboardHeader
+          role="student"
+          userName={displayName}
+          subtitle="Welcome back"
+          profilePhotoUrl={profilePhotoUrl}
+          localProfilePhotoUri={localProfilePhotoUri}
+          onProfilePress={() => navigation.navigate('StudentProfile')}
+          onSettingsPress={() => navigation.navigate('StudentSettings')}
+        />
 
-          {/* FEATURES */}
-          <View style={styles.grid}>
-            {features.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                onPress={() => navigation.navigate(item.screen as any)}
-              >
-                <LinearGradient colors={item.gradient} style={styles.iconBox}>
-                  <Text style={styles.icon}>{item.icon}</Text>
-                </LinearGradient>
-                <Text style={styles.title}>{item.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* BONAFIDE APPLY BUTTON */}
-          <TouchableOpacity
-            style={styles.bonafideBtn}
-            onPress={() => navigation.navigate('ApplyBonafide')}
-          >
-            <Text style={styles.bonafideText}>📜 Apply Bonafide Certificate</Text>
-          </TouchableOpacity>
-
-          {/* LOGOUT */}
-          <TouchableOpacity
-            style={styles.logout}
-            onPress={() => navigation.replace('Login')}
-          >
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* PROFILE MODAL */}
-        <Modal visible={profileOpen} transparent animationType="slide">
-          <View style={styles.modal}>
-            <View style={styles.modalContent}>
-              <Text style={styles.name}>{userData?.name}</Text>
-              <Text>{userData?.email}</Text>
-
-              <TouchableOpacity onPress={() => setProfileOpen(false)}>
-                <Text style={styles.closeText}>Close</Text>
+        <View style={styles.content}>
+          {error ? (
+            <View style={styles.notice}>
+              <Text style={styles.noticeTitle}>Dashboard sync issue</Text>
+              <Text style={styles.noticeText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={loadUser}>
+                <Text style={styles.retryText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
-      </View>
-    </>
+          ) : null}
+
+          <Text style={styles.sectionTitle}>Student Tools</Text>
+          <FeatureGrid features={studentFeatures} onFeaturePress={handleFeaturePress} />
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 export default StudentHome;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-
-  header: {
-    padding: 25,
-    paddingTop: 50,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  welcome: { color: '#9CA3AF' },
-  name: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-
-  avatar: { width: 45, height: 45, borderRadius: 25 },
-  avatarPlaceholder: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 12,
-    justifyContent: 'space-between',
-  },
-
-  card: {
-    width: (width - 48) / 2,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-
-  iconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-
-  icon: { fontSize: 28 },
-  title: { fontWeight: '600' },
-
-  bonafideBtn: {
-    margin: 20,
-    backgroundColor: '#10B981',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-
-  bonafideText: { color: '#fff', fontWeight: 'bold' },
-
-  logout: {
-    margin: 20,
-    backgroundColor: '#EF4444',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-
-  logoutText: { color: '#fff', fontWeight: 'bold' },
-
-  modal: {
+  container: {
     flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: dashboardTheme.colors.lightBackground,
   },
-
-  modalContent: {
-    backgroundColor: '#fff',
-    margin: 20,
-    padding: 20,
+  content: {
+    padding: dashboardTheme.spacing.screenPadding,
+    paddingBottom: 28,
+  },
+  sectionTitle: {
+    color: dashboardTheme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 14,
+  },
+  notice: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    borderRadius: dashboardTheme.spacing.cardRadius,
+    padding: 14,
+    marginBottom: 16,
+  },
+  noticeTitle: {
+    color: '#9A3412',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  noticeText: {
+    color: '#9A3412',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: dashboardTheme.colors.warning,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 10,
+    marginTop: 10,
   },
-
+  retryText: {
+    color: dashboardTheme.colors.white,
+    fontWeight: '800',
+  },
   center: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: dashboardTheme.colors.lightBackground,
+    padding: 24,
   },
-  avatarText: {
-    color: '#fff',
-  },
-  closeText: {
-    marginTop: 20,
+  loadingText: {
+    color: dashboardTheme.colors.textSecondary,
+    marginTop: 12,
+    fontSize: 14,
   },
 });

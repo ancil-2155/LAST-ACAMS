@@ -11,6 +11,8 @@ import {
 
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import ACAMSLogo from '../components/common/ACAMSLogo';
+import { dashboardTheme } from '../theme/dashboardTheme';
 
 const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -65,6 +67,10 @@ const LoginScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
+        <View style={styles.logoWrap}>
+          <ACAMSLogo size={84} />
+        </View>
+        <Text style={styles.appName}>ACAMS</Text>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
 
@@ -118,7 +124,7 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: dashboardTheme.colors.lightBackground,
     justifyContent: 'center',
     padding: 20,
   },
@@ -132,10 +138,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  logoWrap: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  appName: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: dashboardTheme.colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: dashboardTheme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -157,7 +174,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#2563EB',
+    backgroundColor: dashboardTheme.colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -177,7 +194,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   linkHighlight: {
-    color: '#2563EB',
+    color: dashboardTheme.colors.primary,
     fontWeight: '600',
   },
 });

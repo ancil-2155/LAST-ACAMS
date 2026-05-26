@@ -1,3 +1,22 @@
 module.exports = {
   preset: '@react-native/jest-preset',
+  moduleNameMapper: {
+    '\\.(jpg|jpeg|png|gif|webp)$': '<rootDir>/__mocks__/fileMock.js',
+    '^@react-native-firebase/auth$': '<rootDir>/__mocks__/firebaseAuth.js',
+    '^@react-native-firebase/firestore$': '<rootDir>/__mocks__/firebaseFirestore.js',
+    '^@react-native-firebase/storage$': '<rootDir>/__mocks__/firebaseStorage.js',
+    '^@react-native-firebase/messaging$': '<rootDir>/__mocks__/firebaseMessaging.js',
+    '^react-native-linear-gradient$': '<rootDir>/__mocks__/LinearGradient.js',
+    '^react-native-vector-icons/MaterialCommunityIcons$': '<rootDir>/__mocks__/VectorIcon.js',
+    '^react-native-vision-camera$': '<rootDir>/__mocks__/visionCamera.js',
+    '^react-native-vision-camera-face-detector$': '<rootDir>/__mocks__/faceDetector.js',
+    '^react-native-worklets-core$': '<rootDir>/__mocks__/workletsCore.js',
+    '^react-native-fast-tflite$': '<rootDir>/__mocks__/fastTflite.js',
+    '^react-native-signature-canvas$': '<rootDir>/__mocks__/SignatureCanvas.js',
+    '^react-native-webview$': '<rootDir>/__mocks__/WebView.js',
+    '^react-native-image-picker$': '<rootDir>/__mocks__/imagePicker.js',
+    '^@react-native-documents/picker$': '<rootDir>/__mocks__/documentPicker.js',
+    '^react-native-blob-util$': '<rootDir>/__mocks__/blobUtil.js',
+    '^react-native-gifted-chat$': '<rootDir>/__mocks__/giftedChat.js',
+  },
 };

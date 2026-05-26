@@ -11,7 +11,7 @@ export const loadFaceNetModel = async () => {
     // E:\at cams new\NEW-ONE--main\NEW-ONE--main\src\assets\models\facenet.tflite
     // Note: If you want to use MobileFaceNet for better performance later, replace the model file.
     // TODO: Optimize bundle size using MobileFaceNet if needed.
-    faceModel = await loadTensorflowModel(require('../../assets/models/facenet.tflite'), 'core-ml');
+    faceModel = await loadTensorflowModel(require('../../assets/models/facenet.tflite'), []);
     console.log('FaceNet Model loaded successfully.');
     return faceModel;
   } catch (error) {
@@ -38,4 +38,23 @@ export const generateFaceEmbedding = async (imageBuffer: Uint8Array): Promise<nu
   // FaceNet typically outputs a 128-float array.
   const embeddingArray = Array.from(outputBuffer[0] as Float32Array);
   return normalizeEmbedding(embeddingArray);
+};
+
+export const averageEmbeddings = (embeddings: number[][]): number[] => {
+  const validEmbeddings = embeddings.filter(embedding => embedding.length > 0);
+
+  if (validEmbeddings.length === 0) {
+    return [];
+  }
+
+  const length = validEmbeddings[0].length;
+  const totals = new Array(length).fill(0);
+
+  validEmbeddings.forEach(embedding => {
+    embedding.forEach((value, index) => {
+      totals[index] += value;
+    });
+  });
+
+  return normalizeEmbedding(totals.map(total => total / validEmbeddings.length));
 };
